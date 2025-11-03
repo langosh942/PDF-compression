@@ -4,6 +4,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+out/
 
 # Python
 __pycache__/
@@ -14,18 +15,21 @@ __pycache__/
 dist/
 build/
 .eggs/
+.pytest_cache/
 
 # Virtual environments
 .env
 .venv
 venv/
 ENV/
+env/
 
 # IDE files
 .vscode/
 .idea/
 *.swp
 .DS_Store
+*.sublime-*
 
 # Logs
 *.log
@@ -35,9 +39,17 @@ logs/
 .coverage
 htmlcov/
 .coverage.*
+coverage/
 
 # Docker artifacts
 data/
 
 # Misc
 *.sqlite3
+.env.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# OS
+Thumbs.db
