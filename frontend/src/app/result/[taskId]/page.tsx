@@ -1,11 +1,15 @@
 'use client'
 
-import { useParams } from 'next/navigation'
 import DownloadCard from '@/components/DownloadCard'
 
-export default function ResultPage() {
-  const params = useParams()
-  const taskId = params?.taskId as string
+interface ResultPageProps {
+  params: {
+    taskId: string
+  }
+}
+
+export default function ResultPage({ params }: ResultPageProps) {
+  const { taskId } = params
 
   if (!taskId) {
     return (

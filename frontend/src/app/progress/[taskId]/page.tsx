@@ -1,11 +1,15 @@
 'use client'
 
-import { useParams } from 'next/navigation'
 import ProgressCard from '@/components/ProgressCard'
 
-export default function ProgressPage() {
-  const params = useParams()
-  const taskId = params?.taskId as string
+interface ProgressPageProps {
+  params: {
+    taskId: string
+  }
+}
+
+export default function ProgressPage({ params }: ProgressPageProps) {
+  const { taskId } = params
 
   if (!taskId) {
     return (
