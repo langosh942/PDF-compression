@@ -15,6 +15,18 @@ celery -A app.celery worker --loglevel=info
 celery -A app.worker worker --loglevel=info
 ```
 
+## Windows-specific instructions
+
+On Windows, Celery has known issues with the default multiprocessing pool. The application automatically detects Windows and configures the worker to use the `solo` pool to avoid WinError 5 (Access Denied) permission issues.
+
+Simply run the worker normally on Windows:
+
+```bash
+celery -A celery_worker worker --loglevel=info
+```
+
+The application will automatically use the `solo` pool on Windows. No additional flags are needed.
+
 ## Prerequisites
 
 Make sure you have:

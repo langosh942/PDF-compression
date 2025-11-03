@@ -1,3 +1,5 @@
+import platform
+
 from celery import Celery
 
 from app.core.config import settings
@@ -16,3 +18,10 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
 )
+
+if platform.system() == "Windows":
+    celery_app.conf.update(
+        worker_pool="solo",
+        worker_concurrency=1,
+        worker_prefetch_multiplier=1,
+    )
