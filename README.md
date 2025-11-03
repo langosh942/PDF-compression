@@ -51,6 +51,10 @@ Browser → Nginx → Frontend (Next.js) | Backend (FastAPI)
 ### Launch
 
 ```bash
+# 1. Copy the example environment file (or use the existing .env)
+cp .env.example .env
+
+# 2. Start all services
 docker-compose up --build
 ```
 
@@ -58,7 +62,16 @@ docker-compose up --build
 
 - **Web UI**: http://localhost
 - **API**: http://localhost/api
-- **MinIO Console**: http://localhost:9000
+- **MinIO Console**: http://localhost:9001 (username: admin, password: password)
+
+### Usage
+
+1. Open http://localhost in your browser
+2. Select a PDF file to compress
+3. Enter your desired target size (in MB)
+4. Click "开始压缩" (Start Compression)
+5. Wait for the compression to complete
+6. Download your compressed PDF
 
 ## Project Structure
 
