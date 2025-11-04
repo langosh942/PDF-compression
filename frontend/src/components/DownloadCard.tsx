@@ -57,12 +57,13 @@ export default function DownloadCard({ taskId }: DownloadCardProps) {
         </div>
       </div>
 
-      <Link
+      <a
         href={data.result_download_url}
+        download
         className="inline-flex w-full items-center justify-center rounded-xl bg-green-500 px-6 py-3 text-lg font-semibold text-slate-900 transition hover:bg-green-400"
       >
         下载压缩后的 PDF
-      </Link>
+      </a>
 
       <Link href="/" className="block text-center text-sm text-blue-400 hover:text-blue-300">
         返回首页重新压缩
