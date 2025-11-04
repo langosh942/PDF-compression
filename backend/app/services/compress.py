@@ -63,17 +63,22 @@ def compress_pdf(
     target_bytes = int(target_size_mb * 1024 * 1024)
     original_size = source_path.stat().st_size
 
-    if original_size <= target_bytes:
+    if target_bytes > 0 and original_size <= target_bytes:
         shutil.copyfile(source_path, target_path)
         return CompressionResult(target_path, original_size)
 
     best_output: Optional[Path] = None
     best_diff = float("inf")
+    best_size = original_size
+
+    best_under_target_bytes: Optional[bytes] = None
+    best_under_target_size: Optional[int] = None
+    best_under_target_diff: Optional[int] = None
 
     low, high = min_quality, max_quality
 
     for iteration in range(1, max_iterations + 1):
-        quality = (low + high) // 2
+        quality = max(min_quality, min(max_quality, (low + high) // 2))
         iteration_path = target_path.with_name(f"{target_path.stem}.tmp.{iteration}{target_path.suffix}")
 
         with pikepdf.open(source_path) as pdf:
@@ -102,31 +107,49 @@ def compress_pdf(
             shutil.copyfile(iteration_path, target_path)
             best_output = target_path
             best_diff = diff
+            best_size = compressed_size
+
+        if target_bytes > 0 and compressed_size <= target_bytes:
+            under_diff = target_bytes - compressed_size
+            if best_under_target_diff is None or under_diff < best_under_target_diff:
+                best_under_target_bytes = iteration_path.read_bytes()
+                best_under_target_size = compressed_size
+                best_under_target_diff = under_diff
 
         if target_bytes == 0:
             iteration_path.unlink(missing_ok=True)
             continue
-
-        if abs(compressed_size - target_bytes) / target_bytes <= 0.1:
-            iteration_path.unlink(missing_ok=True)
-            break
 
         if compressed_size > target_bytes:
             high = quality - 1
         else:
             low = quality + 1
 
+        tolerance = int(target_bytes * 0.05)
+        should_break = False
+        if best_under_target_diff is not None:
+            if best_under_target_diff <= tolerance or iteration == max_iterations:
+                should_break = True
+
         iteration_path.unlink(missing_ok=True)
 
-        if low > high:
+        if low > high or should_break:
             break
 
-    if best_output is None or not best_output.exists():
+    final_size = original_size
+
+    if best_under_target_bytes is not None and best_under_target_size is not None:
+        with open(target_path, "wb") as f:
+            f.write(best_under_target_bytes)
+        best_output = target_path
+        final_size = best_under_target_size
+    elif best_output is not None and target_path.exists():
+        final_size = best_size
+    else:
         shutil.copyfile(source_path, target_path)
         best_output = target_path
+        final_size = original_size
 
-    # Ensure final file is not larger than original
-    final_size = target_path.stat().st_size
     if final_size > original_size:
         shutil.copyfile(source_path, target_path)
         final_size = original_size

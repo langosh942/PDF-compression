@@ -5,9 +5,10 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -64,18 +65,19 @@ async def create_compression_task(
         raise HTTPException(status_code=500, detail="Failed to store uploaded file")
 
     original_size_bytes = len(content)
-    try:
-        path_obj = Path(stored_path)
-        if path_obj.exists():
-            original_size_bytes = path_obj.stat().st_size
-    except OSError:
-        pass
+    if settings.STORAGE_BACKEND == "local":
+        try:
+            path_obj = Path(stored_path)
+            if path_obj.exists():
+                original_size_bytes = path_obj.stat().st_size
+        except OSError:
+            pass
 
     task = CompressionTask(
         id=task_id,
         status=TaskStatus.QUEUED,
         original_filename=file.filename or "unknown.pdf",
-        original_file_path=stored_path,
+        original_file_path=original_file_key,
         original_size_bytes=original_size_bytes,
         target_size_mb=target_size_mb,
         min_quality=min_quality,
@@ -130,13 +132,40 @@ def download_compressed_file(task_id: str, db: Session = Depends(get_db)):
     if not task.compressed_file_path:
         raise HTTPException(status_code=404, detail="Compressed file not available")
 
-    compressed_path = Path(task.compressed_file_path)
-    if not compressed_path.exists():
-        raise HTTPException(status_code=404, detail="File does not exist")
-
     filename = f"compressed_{task.original_filename}"
-    return FileResponse(
-        path=compressed_path,
-        media_type="application/pdf",
-        filename=filename,
-    )
+
+    if settings.STORAGE_BACKEND == "local":
+        compressed_path = Path(task.compressed_file_path)
+        if not compressed_path.exists():
+            compressed_path = Path(settings.STORAGE_PATH) / task.compressed_file_path
+        if not compressed_path.exists():
+            raise HTTPException(status_code=404, detail="File does not exist")
+
+        return FileResponse(
+            path=compressed_path,
+            media_type="application/pdf",
+            filename=filename,
+        )
+    else:
+        storage = get_storage()
+        reference = task.compressed_file_path
+        key = reference
+        if reference.startswith("http"):
+            parsed = urlparse(reference)
+            path = parsed.path.lstrip("/")
+            if path:
+                parts = path.split("/", 1)
+                if len(parts) == 2:
+                    key = parts[1]
+                else:
+                    key = parts[0]
+
+        try:
+            file_data = storage.get(key)
+            return StreamingResponse(
+                BytesIO(file_data),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        except Exception:
+            raise HTTPException(status_code=404, detail="File does not exist in storage")
